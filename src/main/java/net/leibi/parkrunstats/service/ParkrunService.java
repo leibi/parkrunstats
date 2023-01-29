@@ -9,10 +9,10 @@ import org.jsoup.nodes.Element;
 import org.jsoup.nodes.Node;
 import org.jsoup.nodes.TextNode;
 import org.jsoup.select.Elements;
-import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.IntStream;
@@ -29,20 +29,30 @@ public class ParkrunService {
     // example: https://www.parkrun.com.de/seewoog/results/157/
     private static final String EVENTRESULTBASEURL = "https://www.parkrun.com.de/%s/results/%s/";
     private final WebsiteFetcherService websiteFetcherService;
-    private String[] supportedEvents = {"seewoog"};
+    private String[] supportedEvents = {"seewoog", "neckarau"};
 
     public ParkrunService(WebsiteFetcherService websiteFetcherService) {
         this.websiteFetcherService = websiteFetcherService;
     }
 
-    public List<ParkrunResult> getAllResultsFromEvent(@Nonnull final String event) {
-        Optional<Integer> optionalLatestEvent = getLatestEventNumber(event);
-        var allResults = new ArrayList<ParkrunResult>();
-        optionalLatestEvent.ifPresent(latestEventNumber -> IntStream.range(1, latestEventNumber).parallel().forEach(eventNumber -> allResults.addAll(getParkrunResults(event, eventNumber))));
-        return allResults;
+    public List<ParkrunResult> getAllResultsFromAllSupportedEvents() {
+        return Arrays.stream(supportedEvents)
+                .parallel()
+                .map(this::getAllResultsFromEvent)
+                .flatMap(List::stream)
+                .toList();
     }
 
-    @Cacheable("latestEventNumberCache")
+    public List<ParkrunResult> getAllResultsFromEvent(@Nonnull final String event) {
+        Optional<Integer> latestEventNumber1 = getLatestEventNumber(event);
+        return latestEventNumber1.map(value -> IntStream.range(1, value)
+                .parallel()
+                .mapToObj(integer -> getParkrunResults(event, integer))
+                .flatMap(List::stream)
+                .toList()).orElseGet(ArrayList::new);
+    }
+
+    //@Cacheable("latestEventNumberCache")
     public Optional<Integer> getLatestEventNumber(@Nonnull final String event) {
         // https://www.parkrun.com.de/seewoog/results/latestresults/
         String latestresultsURL = EVENTRESULTBASEURL.formatted(event, "latestresults");
@@ -56,7 +66,7 @@ public class ParkrunService {
         return Optional.of(Integer.valueOf(textNode.text().substring(1)));
     }
 
-    @Cacheable("parkrunResultsCache")
+    //@Cacheable("parkrunResultsCache")
     public List<ParkrunResult> getParkrunResults(@Nonnull String event, @Nonnull Integer eventNumber) {
         String resultsUrl = EVENTRESULTBASEURL.formatted(event, eventNumber);
         var resultList = new ArrayList<ParkrunResult>();
