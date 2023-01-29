@@ -7,13 +7,11 @@ import org.jsoup.nodes.Document;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
-import java.net.http.HttpClient;
 import java.util.Optional;
 
 @Service
 @Slf4j
 public class WebsiteFetcherService {
-    private final HttpClient httpClient = HttpClient.newHttpClient();
 
     @NonNull
     public Optional<Document> getWebsite(final @NonNull String url) {

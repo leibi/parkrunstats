@@ -56,4 +56,9 @@ class ParkrunServiceTest {
                 .hasSize(29)
                 .allSatisfy(parkrunResult -> assertThat(parkrunResult.eventNumber()).isEqualTo(158));
     }
+
+    @Test
+    void getAllResultsFromEvent() {
+        assertThat(parkrunService.getAllResultsFromEvent("seewoog")).hasSize(5376);
+    }
 }

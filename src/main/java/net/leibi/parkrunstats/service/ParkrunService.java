@@ -15,6 +15,7 @@ import org.springframework.stereotype.Service;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.IntStream;
 
 import static ch.qos.logback.core.util.OptionHelper.isNullOrEmpty;
 import static java.util.Objects.isNull;
@@ -34,7 +35,14 @@ public class ParkrunService {
         this.websiteFetcherService = websiteFetcherService;
     }
 
-    @Cacheable
+    public List<ParkrunResult> getAllResultsFromEvent(@Nonnull final String event) {
+        Optional<Integer> optionalLatestEvent = getLatestEventNumber(event);
+        var allResults = new ArrayList<ParkrunResult>();
+        optionalLatestEvent.ifPresent(latestEventNumber -> IntStream.range(1, latestEventNumber).parallel().forEach(eventNumber -> allResults.addAll(getParkrunResults(event, eventNumber))));
+        return allResults;
+    }
+
+    @Cacheable("latestEventNumberCache")
     public Optional<Integer> getLatestEventNumber(@Nonnull final String event) {
         // https://www.parkrun.com.de/seewoog/results/latestresults/
         String latestresultsURL = EVENTRESULTBASEURL.formatted(event, "latestresults");
@@ -48,7 +56,7 @@ public class ParkrunService {
         return Optional.of(Integer.valueOf(textNode.text().substring(1)));
     }
 
-    @Cacheable
+    @Cacheable("parkrunResultsCache")
     public List<ParkrunResult> getParkrunResults(@Nonnull String event, @Nonnull Integer eventNumber) {
         String resultsUrl = EVENTRESULTBASEURL.formatted(event, eventNumber);
         var resultList = new ArrayList<ParkrunResult>();
@@ -80,10 +88,13 @@ public class ParkrunService {
                 }
             }
         }
-        Integer runsInt = isNullOrEmpty(runs) ? 0 : Integer.valueOf(runs);
-        Integer volsInt = isNullOrEmpty(vols) ? 0 : Integer.valueOf(vols);
+        int runsInt = isNullOrEmpty(runs) ? 0 : Integer.parseInt(runs);
+        int volsInt = isNullOrEmpty(vols) ? 0 : Integer.parseInt(vols);
+        double ageGrade = isNullOrEmpty(agegrade) ? 0.0 : Double.parseDouble(agegrade);
+        int positionInt = isNullOrEmpty(position) ? 0 : Integer.parseInt(position);
+
         ParkRunner parkrunner = new ParkRunner(name, ageGroup, club, gender, runsInt, volsInt);
 
-        return new ParkrunResult(eventNumber, parkrunner, Integer.parseInt(position), time, Double.parseDouble(agegrade));
+        return new ParkrunResult(eventNumber, parkrunner, positionInt, time, ageGrade);
     }
 }
