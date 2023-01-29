@@ -1,4 +1,4 @@
 package net.leibi.parkrunstats.dto;
 
-public record ParkrunResult(ParkRunner parkRunner, int position, String time, double ageGrade) {
+public record ParkrunResult(Integer eventNumber, ParkRunner parkRunner, int position, String time, double ageGrade) {
 }

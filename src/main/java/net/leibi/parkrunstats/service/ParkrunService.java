@@ -9,12 +9,14 @@ import org.jsoup.nodes.Element;
 import org.jsoup.nodes.Node;
 import org.jsoup.nodes.TextNode;
 import org.jsoup.select.Elements;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
+import static ch.qos.logback.core.util.OptionHelper.isNullOrEmpty;
 import static java.util.Objects.isNull;
 
 @Service
@@ -32,11 +34,7 @@ public class ParkrunService {
         this.websiteFetcherService = websiteFetcherService;
     }
 
-    private static String getTextFromClass(Element result, String className) {
-        TextNode node = (TextNode) result.getElementsByClass(className).get(0).childNodes().get(0);
-        return node.text();
-    }
-
+    @Cacheable
     public Optional<Integer> getLatestEventNumber(@Nonnull final String event) {
         // https://www.parkrun.com.de/seewoog/results/latestresults/
         String latestresultsURL = EVENTRESULTBASEURL.formatted(event, "latestresults");
@@ -50,19 +48,20 @@ public class ParkrunService {
         return Optional.of(Integer.valueOf(textNode.text().substring(1)));
     }
 
-    public List<ParkrunResult> getParkrunResults(@Nonnull String event, @Nonnull Integer eventnumber) {
-        String resultsUrl = EVENTRESULTBASEURL.formatted(event, eventnumber);
+    @Cacheable
+    public List<ParkrunResult> getParkrunResults(@Nonnull String event, @Nonnull Integer eventNumber) {
+        String resultsUrl = EVENTRESULTBASEURL.formatted(event, eventNumber);
         var resultList = new ArrayList<ParkrunResult>();
         Optional<Document> optionalWebsite = websiteFetcherService.getWebsite(resultsUrl);
         if (optionalWebsite.isEmpty()) return resultList;
         Elements results = optionalWebsite.get().getElementById("content").getElementsByClass("Results-table-row");
         for (Element result : results) {
-            resultList.add(getParkrunResultFromResultElement(result));
+            resultList.add(getParkrunResultFromResultElement(result, eventNumber));
         }
         return resultList;
     }
 
-    private ParkrunResult getParkrunResultFromResultElement(Element result) {
+    private ParkrunResult getParkrunResultFromResultElement(Element result, Integer eventNumber) {
         String name = result.attr("data-name");
         String ageGroup = result.attr("data-agegroup");
         String club = result.attr("data-club");
@@ -71,9 +70,20 @@ public class ParkrunService {
         String runs = result.attr("data-runs");
         String vols = result.attr("data-vols");
         String agegrade = result.attr("data-agegrade");
+        String time = null;
+        if (result.childNodeSize() >= 6) {
+            Node timeNode = result.childNode(5);
+            if (timeNode.childNodeSize() >= 1) {
+                Node resultTimeNode = timeNode.childNode(0);
+                if (resultTimeNode.childNodeSize() >= 1) {
+                    time = ((TextNode) resultTimeNode.childNode(0)).text();
+                }
+            }
+        }
+        Integer runsInt = isNullOrEmpty(runs) ? 0 : Integer.valueOf(runs);
+        Integer volsInt = isNullOrEmpty(vols) ? 0 : Integer.valueOf(vols);
+        ParkRunner parkrunner = new ParkRunner(name, ageGroup, club, gender, runsInt, volsInt);
 
-        String time = ((TextNode) result.childNodes().get(5).childNodes().get(0).childNode(0)).text();
-        ParkRunner parkrunner = new ParkRunner(name, ageGroup, club, gender, Integer.valueOf(runs), Integer.valueOf(vols));
-        return new ParkrunResult(parkrunner, Integer.valueOf(position), time, Double.valueOf(agegrade));
+        return new ParkrunResult(eventNumber, parkrunner, Integer.parseInt(position), time, Double.parseDouble(agegrade));
     }
 }

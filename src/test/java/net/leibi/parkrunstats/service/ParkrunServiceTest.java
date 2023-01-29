@@ -51,6 +51,9 @@ class ParkrunServiceTest {
 
     @Test
     void getParkrunResults() {
-        assertThat(parkrunService.getParkrunResults("seewoog", 158)).isNotEmpty();
+        assertThat(parkrunService.getParkrunResults("seewoog", 158))
+                .isNotEmpty()
+                .hasSize(29)
+                .allSatisfy(parkrunResult -> assertThat(parkrunResult.eventNumber()).isEqualTo(158));
     }
 }
