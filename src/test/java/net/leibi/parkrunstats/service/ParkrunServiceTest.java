@@ -4,6 +4,7 @@ import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Node;
 import org.jsoup.select.Elements;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -13,6 +14,7 @@ import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.util.Objects;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -24,6 +26,7 @@ class ParkrunServiceTest {
 
 
     @Test
+    @Disabled
     void testClient() throws IOException, InterruptedException {
         HttpClient httpClient = HttpClient.newHttpClient();
 
@@ -36,9 +39,9 @@ class ParkrunServiceTest {
 
         Document document = Jsoup.connect("https://www.parkrun.com.de/seewoog/results/latestresults/").get();
 
-        Node content = document.getElementById("content").getElementsByClass("Results-header").get(0).childNode(1).childNode(2).childNode(0);
+        Node content = Objects.requireNonNull(document.getElementById("content")).getElementsByClass("Results-header").get(0).childNode(1).childNode(2).childNode(0);
         content.attr("value");
-        Elements results = document.getElementById("content").getElementsByClass("Results-table-row");
+        Elements results = Objects.requireNonNull(document.getElementById("content")).getElementsByClass("Results-table-row");
 
         assertThat(document).isNotNull();
 
@@ -60,5 +63,10 @@ class ParkrunServiceTest {
     @Test
     void getAllResultsFromEvent() {
         assertThat(parkrunService.getAllResultsFromEvent("seewoog")).hasSize(5376);
+    }
+
+    @Test
+    void getAllResultsFromAllSupportedEvents() {
+        assertThat(parkrunService.getAllResultsFromAllSupportedEvents()).hasSize(17591);
     }
 }

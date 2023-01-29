@@ -74,12 +74,12 @@ public class ParkrunService {
         if (optionalWebsite.isEmpty()) return resultList;
         Elements results = optionalWebsite.get().getElementById("content").getElementsByClass("Results-table-row");
         for (Element result : results) {
-            resultList.add(getParkrunResultFromResultElement(result, eventNumber));
+            resultList.add(getParkrunResultFromResultElement(result, event, eventNumber));
         }
         return resultList;
     }
 
-    private ParkrunResult getParkrunResultFromResultElement(Element result, Integer eventNumber) {
+    private ParkrunResult getParkrunResultFromResultElement(Element result, String event, Integer eventNumber) {
         String name = result.attr("data-name");
         String ageGroup = result.attr("data-agegroup");
         String club = result.attr("data-club");
@@ -105,6 +105,6 @@ public class ParkrunService {
 
         ParkRunner parkrunner = new ParkRunner(name, ageGroup, club, gender, runsInt, volsInt);
 
-        return new ParkrunResult(eventNumber, parkrunner, positionInt, time, ageGrade);
+        return new ParkrunResult(event, eventNumber, parkrunner, positionInt, time, ageGrade);
     }
 }
